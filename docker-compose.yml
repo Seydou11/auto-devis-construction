@@ -1,40 +1,47 @@
+version: '3.8'
+
 services:
   # --- Service 1 : Le Cerveau (IA Locale) ---
-  ollama:
+  ollama_service:
     image: ollama/ollama:latest
-    container_name: ollama_service
-    ports:
-      - "11434:11434"
     volumes:
-      - ollama_storage:/root/.ollama # Persistance des modèles téléchargés
+      - ollama_storage:/root/.ollama
     restart: always
-    # Pas de section 'deploy' avec GPU ici car tu es sur CPU (Intel i5)
 
-  # --- Service 2 : Le Backend (Python/FastAPI/LlamaIndex) ---
-  backend:
-    build: ./backend
-    container_name: backend_api
+  # --- Service 2 : Le Backend (API Python) ---
+  backend_api:  # <--- ICI: On utilise le bon nom de clé pour correspondre aux autres
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app  # Hot-reload: tes modifs de code sont vues en direct
-      - ./data:/data    # Accès aux PDF stockés sur ton PC
+      - ./backend:/app
+      - ./data:/data
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
+      # Attention: ici on utilise le nom du service défini plus haut (ollama_service)
+      - OLLAMA_BASE_URL=http://ollama_service:11434 
     depends_on:
-      - ollama
-    # Commande pour attendre qu'Ollama soit prêt avant de lancer l'app
-    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+      - ollama_service
 
-  # --- Service 3 : Frontend (Placeholder pour plus tard) ---
-  # On le commente pour l'instant pour ne pas faire planter le lancement
-  # frontend:
-  #   image: node:18-alpine
-  #   working_dir: /app
-  #   volumes:
-  #     - ./frontend:/app
-  #   ports:
-  #     - "3000:3000"
+  # --- Service 3 : Frontend (Interface React) ---
+  frontend_app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      # 1. On monte le code source pour voir tes modifs en direct
+      - ./frontend:/app
+      # 2. LA SOLUTION MAGIQUE : On préserve le dossier node_modules du conteneur
+      # Cela empêche Windows d'écraser les dépendances Linux et corrige l'erreur "Invalid Hook Call"
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend_api # Maintenant ça correspond bien à la clé du service 2
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend_api:8000
 
 volumes:
   ollama_storage:
