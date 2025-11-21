@@ -1,0 +1,20 @@
+# Dépendances Node.js (Frontend)
+/frontend/node_modules
+/frontend/.next
+
+# Environnements Python (Backend)
+/backend/__pycache__
+/backend/.venv
+
+# Fichiers de données volumineux (Catalogue et Index)
+/data/*.pdf
+/data/index_storage
+
+# Fichiers système
+.DS_Store
+.vscode/
+
+# Docker
+/backend/
+/ollama/
+*.log

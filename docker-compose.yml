@@ -1,0 +1,40 @@
+services:
+  # --- Service 1 : Le Cerveau (IA Locale) ---
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama # Persistance des modèles téléchargés
+    restart: always
+    # Pas de section 'deploy' avec GPU ici car tu es sur CPU (Intel i5)
+
+  # --- Service 2 : Le Backend (Python/FastAPI/LlamaIndex) ---
+  backend:
+    build: ./backend
+    container_name: backend_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  # Hot-reload: tes modifs de code sont vues en direct
+      - ./data:/data    # Accès aux PDF stockés sur ton PC
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - ollama
+    # Commande pour attendre qu'Ollama soit prêt avant de lancer l'app
+    command: sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+
+  # --- Service 3 : Frontend (Placeholder pour plus tard) ---
+  # On le commente pour l'instant pour ne pas faire planter le lancement
+  # frontend:
+  #   image: node:18-alpine
+  #   working_dir: /app
+  #   volumes:
+  #     - ./frontend:/app
+  #   ports:
+  #     - "3000:3000"
+
+volumes:
+  ollama_storage:
